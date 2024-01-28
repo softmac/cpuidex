@@ -1,0 +1,36 @@
+
+CPUIDEX 1.00 - CPUID examination utility. January 2024 release.
+Developed by Darek Mihocka for emulators.com.
+
+Running as a 64-bit x64/AMD64 process on a 64-bit x64/AMD64 host architecture.
+
+Maximum Intel function number = 0000000D
+Maximum AMD64 function number = 80000008
+
+Hypervisor functions are present.
+Maximum hyper function number = 4000000C
+
+Processor signature  = 000306A9
+Processor family     =        6
+Processor ext family =        6
+Processor model      =       10
+Processor ext model  =       58
+Processor stepping   =        9
+Processor vendor     = 'GenuineIntel'
+Processor model      = '       Intel(R) Core(TM) i7-3667U CPU @ 2.00GHz'
+
+Basic 32-bit CPU features (first row should all be present on Windows 7):
+X87 TSC CMOV FCMOV CX8 MMX FXSAVE SSE SSE2 HTT CLFLUSH 
+SSE3 VME DE PSE MSR PAE APIC SEP PAT 
+
+Extended 64-bit CPU features (first row should all be present on Windows 10):
+CX16 SSSE3 SSE41 SSE42 POPCNT AES PCLMUL XSAVE OXSAVE RDTSCP 
+----- MWAIT EIST ---- --- AVX F16C --- RDRAND 
+------ --- ----- -------- ---- --- ------ 
+
+Modern features since 2013 (first row should all be present on Windows 11):
+FSGSBASE ------ SMEP FASTSTR ---------- 
+---- ---- ---- --- --- --- ------ ---- ------- 
+
+Checking for possible missing features:
+Warning: model string should not start with spaces
