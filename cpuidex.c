@@ -154,10 +154,12 @@ bool HasAVX()      { return LookUpRegBit(1, 0, CPUID_ECX, 28); }
 bool HasF16C()     { return LookUpRegBit(1, 0, CPUID_ECX, 29); }
 bool HasRDRAND()   { return LookUpRegBit(1, 0, CPUID_ECX, 30); }
 
-bool HasLAHF64()   { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  1); }
+bool HasLAHF64()   { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  0); }
 bool HasABM()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  5); }
 bool HasSSE4A()    { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  6); }
 bool Has3DPREF()   { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  8); }
+bool HasXOP()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 11); }
+bool HasLWP()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 15); }
 bool HasFMA4()     { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 16); }
 bool HasTBM()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 21); }
 bool HasMONITORX() { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 29); }
@@ -183,10 +185,10 @@ bool HasCETSS()    { return LookUpRegBit(7, 0, CPUID_ECX,  7); }
 bool HasVAES()     { return LookUpRegBit(7, 0, CPUID_ECX,  9); }
 bool HasVPCLMUL()  { return LookUpRegBit(7, 0, CPUID_ECX, 10); }
 
-bool HasXSAVEOPT() { return LookUpRegBit(13, 1, CPUID_ECX,  0); }
-bool HasXSAVEC()   { return LookUpRegBit(13, 1, CPUID_ECX,  1); }
-bool HasXGETBV()   { return LookUpRegBit(13, 1, CPUID_ECX,  2); }
-bool HasXSAVES()   { return LookUpRegBit(13, 1, CPUID_ECX,  3); }
+bool HasXSAVEOPT() { return LookUpRegBit(13, 1, CPUID_EAX,  0); }
+bool HasXSAVEC()   { return LookUpRegBit(13, 1, CPUID_EAX,  1); }
+bool HasXGETBV()   { return LookUpRegBit(13, 1, CPUID_EAX,  2); }
+bool HasXSAVES()   { return LookUpRegBit(13, 1, CPUID_EAX,  3); }
 
 bool HasAVX512F()  { return LookUpRegBit(7, 0, CPUID_EBX, 16); }
 
@@ -327,7 +329,7 @@ int __cdecl main()
     // check for extended functions, which are primarily used and defined by AMD
 //  bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
 
-    printf("\nCPUIDEX 1.00 - CPUID examination utility. January 2024 release.\n");
+    printf("\nCPUIDEX 1.02 - CPUID examination utility. May 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -455,6 +457,8 @@ int __cdecl main()
     ShowIsFeaturePresent("ABM",     ABM);
     ShowIsFeaturePresent("SSE4A",   SSE4A);
     ShowIsFeaturePresent("PREFETCH",3DPREF);
+    ShowIsFeaturePresent("XOP",     XOP);
+    ShowIsFeaturePresent("LWP",     LWP);
     ShowIsFeaturePresent("FMA4",    FMA4);
     ShowIsFeaturePresent("TBM",     TBM);
     ShowIsFeaturePresent("MWAITX",  MONITORX);
@@ -478,10 +482,10 @@ int __cdecl main()
     ShowIsFeaturePresent("CET_SS",  CETSS);
     ShowIsFeaturePresent("VAES",    VAES);
     ShowIsFeaturePresent("VPCLMUL", VPCLMUL);
-//  ShowIsFeaturePresent("XSAVEOPT",XSAVEOPT);
-//  ShowIsFeaturePresent("XSAVEC",  XSAVEC);
-//  ShowIsFeaturePresent("XGETBV",  XGETBV);
-//  ShowIsFeaturePresent("XSAVES",  XSAVES);
+    ShowIsFeaturePresent("XSAVEOPT",XSAVEOPT);
+    ShowIsFeaturePresent("XSAVEC",  XSAVEC);
+    ShowIsFeaturePresent("XGETBV",  XGETBV);
+    ShowIsFeaturePresent("XSAVES",  XSAVES);
     printf("\n");
 
     printf("\nChecking for possible missing features:\n");
