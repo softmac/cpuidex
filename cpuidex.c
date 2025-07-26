@@ -149,7 +149,7 @@ bool HasMOVBE()    { return LookUpRegBit(1, 0, CPUID_ECX, 22); }
 bool HasPOPCNT()   { return LookUpRegBit(1, 0, CPUID_ECX, 23); }
 bool HasAES()      { return LookUpRegBit(1, 0, CPUID_ECX, 25); }
 bool HasXSAVE()    { return LookUpRegBit(1, 0, CPUID_ECX, 26); }
-bool HasOXSAVE()   { return LookUpRegBit(1, 0, CPUID_ECX, 27); }
+bool HasOSXSAVE()  { return LookUpRegBit(1, 0, CPUID_ECX, 27); }
 bool HasAVX()      { return LookUpRegBit(1, 0, CPUID_ECX, 28); }
 bool HasF16C()     { return LookUpRegBit(1, 0, CPUID_ECX, 29); }
 bool HasRDRAND()   { return LookUpRegBit(1, 0, CPUID_ECX, 30); }
@@ -329,7 +329,7 @@ int __cdecl main()
     // check for extended functions, which are primarily used and defined by AMD
 //  bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
 
-    printf("\nCPUIDEX 1.02 - CPUID examination utility. May 2025 release.\n");
+    printf("\nCPUIDEX 1.03 - CPUID examination utility. July 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -358,6 +358,18 @@ int __cdecl main()
     printf("Processor stepping   = %8u\n", ProcessorStepping);
     printf("Processor vendor     = '%s'\n", LookUpVendorString());
     printf("Processor model      = '%s'\n", LookUpModelString());
+
+    const uint32_t ProcessorEbxBits = LookUpReg(1, 0, CPUID_EBX);
+    const uint32_t ProcessorEcxBits = LookUpReg(1, 0, CPUID_ECX);
+    const uint32_t ProcessorEdxBits = LookUpReg(1, 0, CPUID_EDX);
+
+    printf("Processor brand index= %8u\n", ProcessorEbxBits & 0xFF);
+    printf("CLFLUSH line size    = %8u bytes\n", (ProcessorEbxBits >> 5) & 0x7F8);
+    printf("Processor max IDs    = %8u\n", (ProcessorEbxBits >> 16) & 0xFF);
+
+    printf("Basic features ECX   = %08X\n", ProcessorEcxBits);
+    printf("Basic features EDX   = %08X\n", ProcessorEdxBits);
+
 
 #if 0
 
@@ -440,7 +452,7 @@ int __cdecl main()
     ShowIsFeaturePresent("AES",     AES);
     ShowIsFeaturePresent("PCLMUL",  PCLMUL);
     ShowIsFeaturePresent("XSAVE",   XSAVE);
-    ShowIsFeaturePresent("OXSAVE",  OXSAVE);
+    ShowIsFeaturePresent("OSXSAVE", OSXSAVE);
     ShowIsFeaturePresent("RDTSCP",  RDTSCP);
     printf("\n");
     ShowIsFeaturePresent("MOVBE",   MOVBE);
@@ -499,7 +511,7 @@ int __cdecl main()
     WarnIfFeatureMissing("RDTSCP",  RDTSCP);
 #endif
 
-    if (HasAES())
+    if (HasAES() || HasAVX())
     {
         // All CPUs with hardware AES support SSSE3 SSE4.2 and XSAVE
         WarnIfFeatureMissing("SSSE3",   SSSE3);
