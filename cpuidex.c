@@ -46,6 +46,8 @@ typedef enum CPUID_REGS
     CPUID_EDX = 3,
 } CPUID_REGS;
 
+extern unsigned __int64 CallXgetbv(unsigned int ECX);
+
 //
 // Helper functions to probe CPUID by register, bit, bitfield, or string.
 //
@@ -165,6 +167,7 @@ bool HasTBM()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 21); }
 bool HasMONITORX() { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 29); }
 
 bool HasRDTSCP()   { return LookUpRegBit(0x80000001, 0, CPUID_EDX, 27); }
+bool HasTSCINV()   { return LookUpRegBit(0x80000007, 0, CPUID_EDX,  8); }
 
 // Windows 11 modern AVX2+ Intel Core and AMD Zen bits:
 
@@ -329,7 +332,7 @@ int __cdecl main()
     // check for extended functions, which are primarily used and defined by AMD
 //  bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
 
-    printf("\nCPUIDEX 1.03 - CPUID examination utility. July 2025 release.\n");
+    printf("\nCPUIDEX 1.05 - CPUID examination utility. August 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -464,6 +467,7 @@ int __cdecl main()
     ShowIsFeaturePresent("F16C",    F16C);
     ShowIsFeaturePresent("FMA",     FMA);
     ShowIsFeaturePresent("RDRAND",  RDRAND);
+    ShowIsFeaturePresent("TSCINV",  TSCINV);
     printf("\n");
     ShowIsFeaturePresent("LAHF64",  LAHF64);
     ShowIsFeaturePresent("ABM",     ABM);
@@ -517,6 +521,13 @@ int __cdecl main()
         WarnIfFeatureMissing("SSSE3",   SSSE3);
         WarnIfFeatureMissing("SSE42",   SSE42);
         WarnIfFeatureMissing("XSAVE",   XSAVE);
+        WarnIfFeatureMissing("TSCINV",  TSCINV);
+    }
+
+    if (HasAVX() || HasAVX2())
+    {
+        // All CPUs with hardware AVX/AVX2 should support XGETBV
+        WarnIfFeatureMissing("OSXSAVE", OSXSAVE);
     }
 
     // Make sure the model string starts with real text
@@ -524,6 +535,40 @@ int __cdecl main()
     {
         printf("Warning: model string should not start with spaces\n");
         Warnings++;
+    }
+
+    if (HasAVX() || HasAVX2())
+    {
+        printf("\nChecking for XGETBV constistency:\n");
+
+        printf("xgetbv(0) intrinsic  = %08llX\n", _xgetbv(0));
+        printf("xgetbv(0) asm func   = %08llX\n", CallXgetbv(0));
+
+        if (_xgetbv(0) != CallXgetbv(0))
+        {
+            printf("Warning: XGETBV return value mismatch\n");
+            Warnings++;
+        }
+
+        printf("\nChecking for TSC constistency:\n");
+
+        for (int tsc_tries = 0; tsc_tries < 100000; tsc_tries++)
+        {
+            if (__rdtsc() == __rdtsc())
+            {
+                printf("Warning: RDTSC returned the same value, needs to be monotonically increasing\n");
+                Warnings++;
+                break;
+            }
+
+            uint32_t Proc1 = 0, Proc2 = 0;
+            if (__rdtscp(&Proc1) == __rdtscp(&Proc2))
+            {
+                printf("Warning: RDTSCP returned the same value, needs to be monotonically increasing\n");
+                Warnings++;
+                break;
+            }
+        }
     }
 
     if (Warnings == 0)

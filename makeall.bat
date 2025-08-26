@@ -18,17 +18,31 @@
     echo Make sure to run vcvars64.bat
     goto end
     )
- 
-  @rem assemble the ASM file
-  ml64 -c -Zd -Zi cpuid64.asm
 
-  @if not exist cpuid64.obj (
-    echo ASM failed.
-    @if "%VSCMD_ARG_TGT_ARCH%" == "arm64" (
-      echo Make sure to run the x64 build first!
-      )
+  @rem assemble the ASM file
+  ml64 -c -Zd -Zi -D_X64_ cpuid64.asm
+  )
+
+@if "%VSCMD_ARG_TGT_ARCH%" == "x86" (
+  @ml.exe 1>nul 2>nul
+  echo %errorlevel%
+
+  @if not "%errorlevel%" == "0" (
+    echo 32-bit assembler not found.
+    echo Make sure to run vcvars32.bat
     goto end
     )
+
+  @rem assemble the ASM file
+  ml -c -Zd -Zi -D_X86_ cpuid64.asm
+  )
+
+@if not exist cpuid64.obj (
+  echo ASM failed.
+  @if "%VSCMD_ARG_TGT_ARCH%" == "arm64" (
+    echo Make sure to run the x64 build first!
+    )
+  goto end
   )
 
 @setlocal
@@ -69,7 +83,15 @@ set LINK_ARGS=-debug -release -opt:ref -incremental:no
 set LINK_LIBS=libucrt.lib onecore.lib kernel32.lib user32.lib ntdll.lib softintrin.lib
 
 @if "%VSCMD_ARG_TGT_ARCH%" == "x64" (
-set LINK_LIBS=%LINK_LIBS% cpuid64.obj
+    set LINK_LIBS=%LINK_LIBS% cpuid64.obj
+    )
+
+@if "%VSCMD_ARG_TGT_ARCH%" == "x86" (
+    set LINK_LIBS=%LINK_LIBS% cpuid64.obj
+    )
+
+@if "%VSCMD_ARG_TGT_ARCH%" == "arm64" (
+    set LINK_LIBS=%LINK_LIBS% cpuid64.obj
     )
 
 link %LINK_ARGS% cpuidex.obj           %LINK_LIBS%
