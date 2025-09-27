@@ -183,6 +183,7 @@ bool HasRDSEED()   { return LookUpRegBit(7, 0, CPUID_EBX, 18); }
 bool HasADX()      { return LookUpRegBit(7, 0, CPUID_EBX, 19); }
 bool HasRDPID()    { return LookUpRegBit(7, 0, CPUID_EBX, 22); }
 bool HasCLFLSHOP() { return LookUpRegBit(7, 0, CPUID_EBX, 23); }
+bool HasSHANI()    { return LookUpRegBit(7, 0, CPUID_EBX, 29); }
 
 bool HasCETSS()    { return LookUpRegBit(7, 0, CPUID_ECX,  7); }
 bool HasVAES()     { return LookUpRegBit(7, 0, CPUID_ECX,  9); }
@@ -332,7 +333,7 @@ int __cdecl main()
     // check for extended functions, which are primarily used and defined by AMD
 //  bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
 
-    printf("\nCPUIDEX 1.05 - CPUID examination utility. August 2025 release.\n");
+    printf("\nCPUIDEX 1.06 - CPUID examination utility. September 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -487,6 +488,7 @@ int __cdecl main()
     ShowIsFeaturePresent("SMEP",    SMEP);
     ShowIsFeaturePresent("FASTSTR", REPMOVSB);
     ShowIsFeaturePresent("CLFLUSHOPT",CLFLSHOP);
+    ShowIsFeaturePresent("SHANI",   SHANI);
     printf("\n");
 //  ShowIsFeaturePresent("RDPID",   RDPID);
     ShowIsFeaturePresent("BMI1",    BMI1);
@@ -520,6 +522,7 @@ int __cdecl main()
         // All CPUs with hardware AES support SSSE3 SSE4.2 and XSAVE
         WarnIfFeatureMissing("SSSE3",   SSSE3);
         WarnIfFeatureMissing("SSE42",   SSE42);
+        WarnIfFeatureMissing("OSXSAVE", OSXSAVE);
         WarnIfFeatureMissing("XSAVE",   XSAVE);
         WarnIfFeatureMissing("TSCINV",  TSCINV);
     }
@@ -537,7 +540,7 @@ int __cdecl main()
         Warnings++;
     }
 
-    if (HasAVX() || HasAVX2())
+    if (HasXSAVE() && HasOSXSAVE())
     {
         printf("\nChecking for XGETBV constistency:\n");
 
@@ -549,25 +552,25 @@ int __cdecl main()
             printf("Warning: XGETBV return value mismatch\n");
             Warnings++;
         }
+    }
 
-        printf("\nChecking for TSC constistency:\n");
+    printf("\nChecking for TSC constistency:\n");
 
-        for (int tsc_tries = 0; tsc_tries < 100000; tsc_tries++)
+    for (int tsc_tries = 0; tsc_tries < 100000; tsc_tries++)
+    {
+        if (__rdtsc() == __rdtsc())
         {
-            if (__rdtsc() == __rdtsc())
-            {
-                printf("Warning: RDTSC returned the same value, needs to be monotonically increasing\n");
-                Warnings++;
-                break;
-            }
+            printf("Warning: RDTSC returned the same value, needs to be monotonically increasing\n");
+            Warnings++;
+            break;
+        }
 
-            uint32_t Proc1 = 0, Proc2 = 0;
-            if (__rdtscp(&Proc1) == __rdtscp(&Proc2))
-            {
-                printf("Warning: RDTSCP returned the same value, needs to be monotonically increasing\n");
-                Warnings++;
-                break;
-            }
+        uint32_t Proc1 = 0, Proc2 = 0;
+        if (__rdtscp(&Proc1) == __rdtscp(&Proc2))
+        {
+            printf("Warning: RDTSCP returned the same value, needs to be monotonically increasing\n");
+            Warnings++;
+            break;
         }
     }
 
