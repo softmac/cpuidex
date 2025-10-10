@@ -69,13 +69,19 @@ cl -c %CL_ARGS% cpuidmax-intrin.c
 set LINK_ARGS=-debug -release -opt:ref -incremental:no
 
 @rem x64 supports emitting unwind information for all functions.
-@rem This is useful for code discovery for offline x64-to-ARM64 binary rewriting.:w
+@rem This is useful for code discovery for offline x64-to-ARM64 binary rewriting.
 @if "%VSCMD_ARG_TGT_ARCH%" == "x64" (
+    set OUTFILE=-out:CpuidEx_x64.exe
     set LINK_ARGS=%LINK_ARGS% -allpdata
+    )
+
+@if "%VSCMD_ARG_TGT_ARCH%" == "x86" (
+    set OUTFILE=-out:CpuidEx_x86.exe
     )
 
 @rem force an ARM64X binary format
 @if "%VSCMD_ARG_TGT_ARCH%" == "arm64" (
+    set OUTFILE=-out:CpuidEx_a64.exe
     set LINK_ARGS=%LINK_ARGS% -machine:arm64ec
     )
 
@@ -94,7 +100,7 @@ set LINK_LIBS=libucrt.lib onecore.lib kernel32.lib user32.lib ntdll.lib softintr
     set LINK_LIBS=%LINK_LIBS% cpuid64.obj
     )
 
-link %LINK_ARGS% cpuidex.obj           %LINK_LIBS%
+link %LINK_ARGS% cpuidex.obj %OUTFILE% %LINK_LIBS%
 
 @if "%VSCMD_ARG_TGT_ARCH%" == "x64" (
 link %LINK_ARGS% cpuidmax.obj          %LINK_LIBS%
