@@ -52,9 +52,28 @@ extern unsigned __int64 CallXgetbv(unsigned int ECX);
 // Helper functions to probe CPUID by register, bit, bitfield, or string.
 //
 
-uint32_t LookUpReg(int Function, int Sub, CPUID_REGS Reg)
+uint32_t LookUpReg(uint32_t Function, uint32_t Sub, CPUID_REGS Reg)
 {
-    int CpuInfo[4];
+    int CpuInfo[4] = { };
+
+    if ((Function > MaxFunc) && (Function < BaseFuncHyp))
+    {
+        printf("Function %08X out of range for basic functions limit %08X\n", Function, MaxFunc);
+        return 0;
+    }
+
+    if (MaxFuncHyp && (Function > MaxFuncHyp) && (Function < BaseFuncExt))
+    {
+        printf("Function %08X out of range for hyper functions limit %08X\n", Function, MaxFuncHyp);
+        return 0;
+    }
+
+    if (MaxFuncExt && (Function > MaxFuncExt))
+    {
+        printf("Function %08X out of range for extended functions limit %08X\n", Function, MaxFuncExt);
+        return 0;
+    }
+
     __cpuidex(CpuInfo, Function, Sub);
 
     return CpuInfo[Reg];
@@ -179,6 +198,7 @@ bool HasSMEP()     { return LookUpRegBit(7, 0, CPUID_EBX,  7); }
 bool HasBMI2()     { return LookUpRegBit(7, 0, CPUID_EBX,  8); }
 bool HasREPMOVSB() { return LookUpRegBit(7, 0, CPUID_EBX,  9); }
 bool HasRTM()      { return LookUpRegBit(7, 0, CPUID_EBX, 11); }
+bool HasDEPRFPU()  { return LookUpRegBit(7, 0, CPUID_EBX, 13); }
 bool HasRDSEED()   { return LookUpRegBit(7, 0, CPUID_EBX, 18); }
 bool HasADX()      { return LookUpRegBit(7, 0, CPUID_EBX, 19); }
 bool HasRDPID()    { return LookUpRegBit(7, 0, CPUID_EBX, 22); }
@@ -189,12 +209,17 @@ bool HasCETSS()    { return LookUpRegBit(7, 0, CPUID_ECX,  7); }
 bool HasVAES()     { return LookUpRegBit(7, 0, CPUID_ECX,  9); }
 bool HasVPCLMUL()  { return LookUpRegBit(7, 0, CPUID_ECX, 10); }
 
-bool HasXSAVEOPT() { return LookUpRegBit(13, 1, CPUID_EAX,  0); }
-bool HasXSAVEC()   { return LookUpRegBit(13, 1, CPUID_EAX,  1); }
-bool HasXGETBV()   { return LookUpRegBit(13, 1, CPUID_EAX,  2); }
-bool HasXSAVES()   { return LookUpRegBit(13, 1, CPUID_EAX,  3); }
+bool HasAVXVNNI()  { return LookUpRegBit(7, 1, CPUID_EAX,  4); }
+bool HasAVX10()    { return LookUpRegBit(7, 1, CPUID_EAX, 19); }
+
+bool HasXSAVEOPT() { return LookUpRegBit(13, 1, CPUID_EAX, 0); }
+bool HasXSAVEC()   { return LookUpRegBit(13, 1, CPUID_EAX, 1); }
+bool HasXGETBV()   { return LookUpRegBit(13, 1, CPUID_EAX, 2); }
+bool HasXSAVES()   { return LookUpRegBit(13, 1, CPUID_EAX, 3); }
 
 bool HasAVX512F()  { return LookUpRegBit(7, 0, CPUID_EBX, 16); }
+bool HasAVX512CD() { return LookUpRegBit(7, 0, CPUID_EBX, 28); }
+bool HasAVX512VNNI(){ return LookUpRegBit(7,0, CPUID_ECX, 11); }
 
 #define ShowIsFeaturePresent(S,F) \
     printf ( "%s ", Has ## F () ? S : &"----------------"[16 - strlen(S)]);
@@ -321,19 +346,48 @@ const char *GetHostArchString()
         }
 }
 
-int __cdecl main()
+int __cdecl main(int argc, char **argv)
 {
+    // Assume first function is available, then populate limits with actual lookups
+
+    MaxFuncHyp = BaseFuncHyp;
+    MaxFuncExt = BaseFuncExt;
+
     MaxFunc    = LookUpReg(BaseFunc,    0, CPUID_EAX);
-    MaxFuncHyp = LookUpReg(BaseFuncHyp, 0, CPUID_EAX);
-    MaxFuncExt = LookUpReg(BaseFuncExt, 0, CPUID_EAX);
 
     // hypervisor may not be present so verify that something valid got returned
+
+    MaxFuncHyp = LookUpReg(BaseFuncHyp, 0, CPUID_EAX);
     bool HasHypervisor = (MaxFuncHyp >= BaseFuncHyp) && ((MaxFuncHyp - BaseFuncHyp) < 0x1000);
 
-    // check for extended functions, which are primarily used and defined by AMD
-//  bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
+    MaxFuncHyp = HasHypervisor ? MaxFuncHyp : 0;
 
-    printf("\nCPUIDEX 1.06 - CPUID examination utility. September 2025 release.\n");
+    // check for extended functions, which are primarily used and defined by AMD
+
+    MaxFuncExt = LookUpReg(BaseFuncExt, 0, CPUID_EAX);
+    bool HasExtFuncs   = (MaxFuncExt >= BaseFuncExt) && ((MaxFuncExt - BaseFuncExt) < 0x1000);
+
+    MaxFuncExt = HasExtFuncs ? MaxFuncExt : 0;
+
+    // now we can look up arbitrary functions
+    // check if we're looking up a specific function
+
+    if (argc > 1)
+    {
+        uint32_t Function = strtol(argv[1], NULL, 0);
+        uint32_t SubFunc = (argc > 2) ? strtol(argv[2], NULL, 0) : 0;
+
+        printf("Function %08X[%08X]: ", Function, SubFunc);
+        printf("%08X %08X %08X %08X\n",
+            LookUpReg(Function, SubFunc, CPUID_EAX),
+            LookUpReg(Function, SubFunc, CPUID_EBX),
+            LookUpReg(Function, SubFunc, CPUID_ECX),
+            LookUpReg(Function, SubFunc, CPUID_EDX));
+
+        return 0;
+    }
+
+    printf("\nCPUIDEX 1.07b - CPUID examination utility. October 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -468,6 +522,7 @@ int __cdecl main()
     ShowIsFeaturePresent("F16C",    F16C);
     ShowIsFeaturePresent("FMA",     FMA);
     ShowIsFeaturePresent("RDRAND",  RDRAND);
+    ShowIsFeaturePresent("DEPRFPU", DEPRFPU);
     ShowIsFeaturePresent("TSCINV",  TSCINV);
     printf("\n");
     ShowIsFeaturePresent("LAHF64",  LAHF64);
@@ -488,7 +543,10 @@ int __cdecl main()
     ShowIsFeaturePresent("SMEP",    SMEP);
     ShowIsFeaturePresent("FASTSTR", REPMOVSB);
     ShowIsFeaturePresent("CLFLUSHOPT",CLFLSHOP);
-    ShowIsFeaturePresent("SHANI",   SHANI);
+    ShowIsFeaturePresent("XSAVEOPT",XSAVEOPT);
+    ShowIsFeaturePresent("XSAVEC",  XSAVEC);
+    ShowIsFeaturePresent("XGETBV",  XGETBV);
+    ShowIsFeaturePresent("XSAVES",  XSAVES);
     printf("\n");
 //  ShowIsFeaturePresent("RDPID",   RDPID);
     ShowIsFeaturePresent("BMI1",    BMI1);
@@ -498,12 +556,16 @@ int __cdecl main()
     ShowIsFeaturePresent("HLE",     HLE);
     ShowIsFeaturePresent("RTM",     RTM);
     ShowIsFeaturePresent("CET_SS",  CETSS);
+    ShowIsFeaturePresent("SHANI",   SHANI);
     ShowIsFeaturePresent("VAES",    VAES);
     ShowIsFeaturePresent("VPCLMUL", VPCLMUL);
-    ShowIsFeaturePresent("XSAVEOPT",XSAVEOPT);
-    ShowIsFeaturePresent("XSAVEC",  XSAVEC);
-    ShowIsFeaturePresent("XGETBV",  XGETBV);
-    ShowIsFeaturePresent("XSAVES",  XSAVES);
+    ShowIsFeaturePresent("AVXVNNI", AVXVNNI);
+    printf("\n");
+
+    ShowIsFeaturePresent("AVX512F", AVX512F);
+    ShowIsFeaturePresent("AVX512CD",AVX512CD);
+    ShowIsFeaturePresent("AVX512VNNI",AVX512VNNI);
+    ShowIsFeaturePresent("AVX10",   AVX10);
     printf("\n");
 
     printf("\nChecking for possible missing features:\n");
@@ -521,6 +583,7 @@ int __cdecl main()
     {
         // All CPUs with hardware AES support SSSE3 SSE4.2 and XSAVE
         WarnIfFeatureMissing("SSSE3",   SSSE3);
+        WarnIfFeatureMissing("SSE41",   SSE41);
         WarnIfFeatureMissing("SSE42",   SSE42);
         WarnIfFeatureMissing("OSXSAVE", OSXSAVE);
         WarnIfFeatureMissing("XSAVE",   XSAVE);
@@ -556,7 +619,9 @@ int __cdecl main()
 
     printf("\nChecking for TSC constistency:\n");
 
-    for (int tsc_tries = 0; tsc_tries < 100000; tsc_tries++)
+    int tsc_tries_left = 0;
+
+    for (tsc_tries_left = 1000000; tsc_tries_left > 0; tsc_tries_left--)
     {
         if (__rdtsc() == __rdtsc())
         {
@@ -574,8 +639,13 @@ int __cdecl main()
         }
     }
 
+    if (tsc_tries_left == 0)
+            printf("TSC consistency checks passed\n");
+
     if (Warnings == 0)
-        printf("No checks failed!\n");
+        printf("\nNo checks failed!\n");
+    else
+        printf("\n%u checks failed!\n", Warnings);
 
     return MaxFunc;
 }
