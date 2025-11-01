@@ -178,6 +178,7 @@ bool HasRDRAND()   { return LookUpRegBit(1, 0, CPUID_ECX, 30); }
 bool HasLAHF64()   { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  0); }
 bool HasABM()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  5); }
 bool HasSSE4A()    { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  6); }
+bool HasMISALNSSE(){ return LookUpRegBit(0x80000001, 0, CPUID_ECX,  7); }
 bool Has3DPREF()   { return LookUpRegBit(0x80000001, 0, CPUID_ECX,  8); }
 bool HasXOP()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 11); }
 bool HasLWP()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 15); }
@@ -206,20 +207,48 @@ bool HasCLFLSHOP() { return LookUpRegBit(7, 0, CPUID_EBX, 23); }
 bool HasSHANI()    { return LookUpRegBit(7, 0, CPUID_EBX, 29); }
 
 bool HasCETSS()    { return LookUpRegBit(7, 0, CPUID_ECX,  7); }
+bool HasGFNI()     { return LookUpRegBit(7, 0, CPUID_ECX,  8); }
 bool HasVAES()     { return LookUpRegBit(7, 0, CPUID_ECX,  9); }
 bool HasVPCLMUL()  { return LookUpRegBit(7, 0, CPUID_ECX, 10); }
+bool HasLA57()     { return LookUpRegBit(7, 0, CPUID_ECX, 16); }
 
+bool HasSHA512()   { return LookUpRegBit(7, 1, CPUID_EAX,  0); }
+bool HasSM3()      { return LookUpRegBit(7, 1, CPUID_EAX,  1); }
+bool HasSM4()      { return LookUpRegBit(7, 1, CPUID_EAX,  2); }
+bool HasRAOINT()   { return LookUpRegBit(7, 1, CPUID_EAX,  3); }
 bool HasAVXVNNI()  { return LookUpRegBit(7, 1, CPUID_EAX,  4); }
-bool HasAVX10()    { return LookUpRegBit(7, 1, CPUID_EAX, 19); }
+bool HasLASS()     { return LookUpRegBit(7, 1, CPUID_EAX,  6); }
+bool HasCMPCCXADD(){ return LookUpRegBit(7, 1, CPUID_EAX,  7); }
+bool HasAMXFP16()  { return LookUpRegBit(7, 1, CPUID_EAX, 21); }
+bool HasAVXIFMA()  { return LookUpRegBit(7, 1, CPUID_EAX, 23); }
+bool HasLAM()      { return LookUpRegBit(7, 1, CPUID_EAX, 26); }
+
+bool HasAVXVNNI8() { return LookUpRegBit(7, 1, CPUID_EDX,  4); }
+bool HasAVXNECONV(){ return LookUpRegBit(7, 1, CPUID_EDX,  5); }
+bool HasAMXCMPLX() { return LookUpRegBit(7, 1, CPUID_EDX,  8); }
+bool HasAVXVNNI16(){ return LookUpRegBit(7, 1, CPUID_EDX, 10); }
+bool HasAVX10()    { return LookUpRegBit(7, 1, CPUID_EDX, 19); }
+bool HasAPXF()     { return LookUpRegBit(7, 1, CPUID_EDX, 21); }
 
 bool HasXSAVEOPT() { return LookUpRegBit(13, 1, CPUID_EAX, 0); }
 bool HasXSAVEC()   { return LookUpRegBit(13, 1, CPUID_EAX, 1); }
 bool HasXGETBV()   { return LookUpRegBit(13, 1, CPUID_EAX, 2); }
 bool HasXSAVES()   { return LookUpRegBit(13, 1, CPUID_EAX, 3); }
 
+bool HasAVX512BF16() { return LookUpRegBit(7,1,CPUID_EAX,  5); }
+
 bool HasAVX512F()  { return LookUpRegBit(7, 0, CPUID_EBX, 16); }
+bool HasAVX512DQ() { return LookUpRegBit(7, 0, CPUID_EBX, 17); }
+bool HasAVX512IFMA(){ return LookUpRegBit(7,0, CPUID_EBX, 21); }
 bool HasAVX512CD() { return LookUpRegBit(7, 0, CPUID_EBX, 28); }
+bool HasAVX512BW() { return LookUpRegBit(7, 0, CPUID_EBX, 30); }
+bool HasAVX512VL() { return LookUpRegBit(7, 0, CPUID_EBX, 31); }
+
+bool HasAVX512VBMI(){return LookUpRegBit(7, 0, CPUID_ECX,  1); }
+bool HasAVX512VBMI2(){return LookUpRegBit(7,0, CPUID_ECX,  6); }
 bool HasAVX512VNNI(){ return LookUpRegBit(7,0, CPUID_ECX, 11); }
+bool HasAVX512BITALG(){return LookUpRegBit(7,0,CPUID_ECX, 12); }
+bool HasAVX512POPCNTDQ(){return LookUpRegBit(7, 0, CPUID_ECX, 14); }
 
 #define ShowIsFeaturePresent(S,F) \
     printf ( "%s ", Has ## F () ? S : &"----------------"[16 - strlen(S)]);
@@ -387,7 +416,7 @@ int __cdecl main(int argc, char **argv)
         return 0;
     }
 
-    printf("\nCPUIDEX 1.07b - CPUID examination utility. October 2025 release.\n");
+    printf("\nCPUIDEX 1.08 - CPUID examination utility. November 2025 release.\n");
     printf("Developed by Darek Mihocka for emulators.com.\n");
 
     printf("\nRunning as a %s process on a %s host architecture.\n", GetGuestArchString(), GetHostArchString());
@@ -534,6 +563,7 @@ int __cdecl main(int argc, char **argv)
     ShowIsFeaturePresent("FMA4",    FMA4);
     ShowIsFeaturePresent("TBM",     TBM);
     ShowIsFeaturePresent("MWAITX",  MONITORX);
+    ShowIsFeaturePresent("MISALIGNSSE", MISALNSSE);
     printf("\n");
 
     printf("\nModern features since 2013 (first row should all be present on Windows 11):\n");
@@ -557,15 +587,43 @@ int __cdecl main(int argc, char **argv)
     ShowIsFeaturePresent("RTM",     RTM);
     ShowIsFeaturePresent("CET_SS",  CETSS);
     ShowIsFeaturePresent("SHANI",   SHANI);
+    ShowIsFeaturePresent("GFNI",    GFNI);
     ShowIsFeaturePresent("VAES",    VAES);
     ShowIsFeaturePresent("VPCLMUL", VPCLMUL);
-    ShowIsFeaturePresent("AVXVNNI", AVXVNNI);
+    ShowIsFeaturePresent("AVX-VNNI",AVXVNNI);
+    printf("\n");
+
+    ShowIsFeaturePresent("AVX-VNNI-INT8", AVXVNNI8);
+    ShowIsFeaturePresent("AVX-VNNI-1NT16",AVXVNNI16);
+    ShowIsFeaturePresent("AVX-IFMA", AVXIFMA);
+    ShowIsFeaturePresent("AVX-NE-CONVERT", AVXNECONV);
+    ShowIsFeaturePresent("SHA512",  SHA512);
+    ShowIsFeaturePresent("SM3",     SM3);
+    ShowIsFeaturePresent("SM4",     SM4);
     printf("\n");
 
     ShowIsFeaturePresent("AVX512F", AVX512F);
+    ShowIsFeaturePresent("AVX512DQ",AVX512DQ);
     ShowIsFeaturePresent("AVX512CD",AVX512CD);
-    ShowIsFeaturePresent("AVX512VNNI",AVX512VNNI);
+    ShowIsFeaturePresent("AVX512BW",AVX512BW);
+    ShowIsFeaturePresent("AVX512VL",AVX512VL);
+    ShowIsFeaturePresent("AVX512_IFMA",AVX512IFMA);
+    ShowIsFeaturePresent("AVX512_VNNI",AVX512VNNI);
+    printf("\n");
+
+    ShowIsFeaturePresent("AVX512_VBMI",AVX512VBMI);
+    ShowIsFeaturePresent("AVX512_VBMI2",AVX512VBMI2);
+    ShowIsFeaturePresent("AVX512_BF16",AVX512BF16);
+    ShowIsFeaturePresent("AVX512_POPCNTDQ",AVX512POPCNTDQ);
+    printf("\n");
+
+    ShowIsFeaturePresent("CMPCCXADD", CMPCCXADD);
+    ShowIsFeaturePresent("LASS",    LASS);
+    ShowIsFeaturePresent("LAM",     LAM);
+    ShowIsFeaturePresent("LA57",    LA57);
     ShowIsFeaturePresent("AVX10",   AVX10);
+    ShowIsFeaturePresent("APX_F",   APXF);
+    ShowIsFeaturePresent("RAOINT",  RAOINT);
     printf("\n");
 
     printf("\nChecking for possible missing features:\n");
