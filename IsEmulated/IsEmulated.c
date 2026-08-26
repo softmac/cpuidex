@@ -109,10 +109,27 @@ bool HasMSR()      { return LookUpRegBit(1, 0, CPUID_EDX,  5); }
 bool HasPAE()      { return LookUpRegBit(1, 0, CPUID_EDX,  6); }
 bool HasAPIC()     { return LookUpRegBit(1, 0, CPUID_EDX,  9); }
 bool HasPAT()      { return LookUpRegBit(1, 0, CPUID_EDX, 16); }
+bool HasSSE2()     { return LookUpRegBit(1, 0, CPUID_EDX, 26); }
 bool HasHTT()      { return LookUpRegBit(1, 0, CPUID_EDX, 28); }
+bool HasSSE3()     { return LookUpRegBit(1, 0, CPUID_ECX,  0); }
+bool HasSSE41()    { return LookUpRegBit(1, 0, CPUID_ECX, 19); }
+bool HasSSE42()    { return LookUpRegBit(1, 0, CPUID_ECX, 20); }
+bool HasAVX()      { return LookUpRegBit(1, 0, CPUID_ECX, 28); }
+bool HasAVX2()     { return LookUpRegBit(7, 0, CPUID_EBX,  5); }
+bool HasXOP()      { return LookUpRegBit(0x80000001, 0, CPUID_ECX, 11); }
 
 bool IsEmulatedCpuid()
 {
+    // show which vector features host or emulator supports:
+
+    printf("SSE2   support: %s\n", HasSSE2()  ? "YES" : "NO");
+    printf("SSE3   support: %s\n", HasSSE3()  ? "YES" : "NO");
+    printf("SSE4.1 support: %s\n", HasSSE41() ? "YES" : "NO");
+    printf("SSE4.2 support: %s\n", HasSSE42() ? "YES" : "NO");
+    printf("AVX    support: %s\n", HasAVX()   ? "YES" : "NO");
+    printf("AVX2   support: %s\n", HasAVX2()  ? "YES" : "NO");
+    printf("XOP    support: %s\n", HasXOP()   ? "YES" : "NO");
+
     // look for missing feature which all modern AMD and Intel CPUs always expose
 
     return !(HasVME() && HasDE() && HasPSE() && HasMSR() && HasPAE() && HasAPIC && HasPAT() && HasHTT());
